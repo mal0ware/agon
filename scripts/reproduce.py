@@ -149,7 +149,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--fast", action="store_true", help="fake-backend smoke run as well")
     parser.add_argument("--run-models", action="store_true", help="rerun on local models")
-    parser.add_argument("--n", type=int, default=200, help="filings to draw questions from")
+    parser.add_argument("--n", type=int, default=250, help="filings to draw questions from")
     parser.add_argument("--cap", type=int, default=128, help="token cap per answer")
     parser.add_argument("--models", nargs=2, default=list(MODELS))
     parser.add_argument("--host", default="http://127.0.0.1:11434")

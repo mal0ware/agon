@@ -352,7 +352,8 @@ def figure_headline(path: Path, summary: Sequence[Mapping[str, str]]) -> None:
                         ha="center", fontsize=9, color=INK)  # fmt: skip
         ax.axhline(50, color=MUTED, linewidth=1, linestyle=(0, (4, 3)))
         ax.set_xticks(xs)
-        ax.set_xticklabels([LABELS[r["system"]].replace(", ", ",\n") for r in rows], fontsize=8)
+        ticks = [LABELS[r["system"]].replace(", ", ",\n").replace(" of ", "\nof ") for r in rows]
+        ax.set_xticklabels(ticks, fontsize=8)
         ax.set_xlim(-0.6, len(rows) - 0.4)
         ax.set_title(f"{short(config)} (n = {rows[0]['n']})", fontsize=10, color=INK, loc="left")
         _style(ax)
