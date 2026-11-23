@@ -34,6 +34,15 @@ def solo(q: Question) -> str:
     )
 
 
+def solo_long(q: Question) -> str:
+    """One agent with the room an advocate or a judge gets: five lines, not two."""
+    return (
+        _head(q) + "Decide whether the claim is true or false using only the filing data above. "
+        "Show the calculation step by step, in at most five short lines of plain text.\n"
+        + ANSWER_FORMAT
+    )
+
+
 def closed_book(q: Question) -> str:
     """The recall control: the claim without the filing table."""
     return (

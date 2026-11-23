@@ -45,7 +45,7 @@ def test_every_system_stays_inside_its_budget() -> None:
     # filler_words is far above the cap, so every reply is cut at the cap.
     backend = FakeBackend(TRUTH, {"a": 0.8, "b": 0.6}, filler_words=500)
     outcomes = run_experiment(QUESTIONS, ["a", "b"], backend, PROTO)
-    units = {"single": 1, "closed_book": 1, "vote3": 3, "vote5": 5, "vote6": 6}
+    units = {"single": 1, "closed_book": 1, "long": 2, "vote3": 3, "vote5": 5, "vote6": 6}
     for (_, _, system), o in outcomes.items():
         base = system if system == "closed_book" else system.split("_")[0]
         assert o.budget == units.get(base, 6) * PROTO.cap
@@ -77,5 +77,5 @@ def test_a_system_that_overspends_is_stopped() -> None:
 
 def test_lineup_has_the_expected_jobs() -> None:
     jobs = lineup(QUESTIONS[0], ["a", "b"], PROTO)
-    assert sum(1 for c, _ in jobs if c == "a") == 7
+    assert sum(1 for c, _ in jobs if c == "a") == 8
     assert sum(1 for c, _ in jobs if c == "mixed") == 9

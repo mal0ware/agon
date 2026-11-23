@@ -39,7 +39,7 @@ def test_fake_backend_is_deterministic_and_has_the_stated_skill() -> None:
 def test_a_perfect_model_scores_one_and_a_wrong_one_scores_zero() -> None:
     perfect = run_experiment(QUESTIONS[:40], ["a"], FakeBackend(TRUTH, {"a": 1.0}), PROTO)
     wrong = run_experiment(QUESTIONS[:40], ["a"], FakeBackend(TRUTH, {"a": 0.0}), PROTO)
-    for system in ("single", "vote5", "vote6", "judge", "debate"):
+    for system in ("single", "long", "vote5", "vote6", "judge", "debate"):
         truth = {q.qid: q.truth for q in QUESTIONS}
         assert all(o.verdict == truth[k[0]] for k, o in perfect.items() if k[2] == system)
         assert all(o.verdict != truth[k[0]] for k, o in wrong.items() if k[2] == system)
@@ -90,8 +90,8 @@ def test_shared_calls_run_once_and_the_log_is_a_checkpoint(tmp_path: Path) -> No
     backend = FakeBackend(TRUTH, {"a": 0.7, "b": 0.6})
     first = run_experiment(QUESTIONS[:10], ["a", "b"], backend, PROTO, CallLog(path))
     # Per question: 2 x (closed book, single, 6 samples, bull, bear, judge, 3 revisions)
-    # = 28, plus 6 mixed revisions and 4 mixed judges = 38.
-    assert backend.calls == 10 * 38
+    # = 28, plus 2 long answers, 6 mixed revisions and 4 mixed judges = 40.
+    assert backend.calls == 10 * 40
     lines = path.read_text(encoding="utf-8").splitlines()
     assert len(lines) == backend.calls
     record = json.loads(lines[0])
@@ -145,6 +145,6 @@ def test_report_is_identical_when_built_twice(tmp_path: Path) -> None:
     assert (folders[0] / "fig_headline.png").stat().st_size > 5_000
 
     rows = read_outcomes(folders[0] / "outcomes.csv")
-    assert len(rows) == 60 * (7 + 7 + 9)
+    assert len(rows) == 60 * (8 + 8 + 9)
     summary = (folders[0] / "summary.md").read_text(encoding="utf-8")
     assert "debate" in summary and "mixed" in summary

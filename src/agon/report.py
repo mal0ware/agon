@@ -43,10 +43,11 @@ OUTCOME_FIELDS = (
 QUESTION_FIELDS = ("qid", "cik", "company", "accession", "template", "margin", "truth", "claim")
 
 # Systems shown in the headline, in order. Mixed variants are averaged into these names.
-HEADLINE = ("single", "vote5", "vote6", "judge", "debate")
+HEADLINE = ("single", "long", "vote5", "vote6", "judge", "debate")
 LABELS = {
     "closed_book": "closed book",
     "single": "single",
+    "long": "single, long",
     "vote3": "vote of 3",
     "vote5": "vote of 5",
     "vote6": "vote of 6",
@@ -59,6 +60,8 @@ COMPARISONS = (
     ("debate", "vote3", "debate vs its own first round"),
     ("judge", "vote6", "bull, bear, judge vs vote of 6 (same budget)"),
     ("judge", "single", "bull, bear, judge vs single"),
+    ("judge", "long", "bull, bear, judge vs single, long"),
+    ("long", "single", "single, long vs single"),
     ("vote5", "single", "vote of 5 vs single"),
 )
 BOOT_SEED = 20261123
@@ -186,7 +189,16 @@ def summary_table(cells: Mapping[tuple[str, str], Cell]) -> list[dict[str, str]]
     """Accuracy, calibration and cost for every configuration and system."""
     table: list[dict[str, str]] = []
     for config in configs_of(cells):
-        for system in ("closed_book", "single", "vote3", "vote5", "vote6", "judge", "debate"):
+        for system in (
+            "closed_book",
+            "single",
+            "long",
+            "vote3",
+            "vote5",
+            "vote6",
+            "judge",
+            "debate",
+        ):
             cell = cells.get((config, system))
             if cell is None:
                 continue

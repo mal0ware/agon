@@ -11,6 +11,7 @@ With ``c`` the per-answer cap (:attr:`Protocol.cap`), the budgets are:
 system      calls                                  budget
 ==========  =====================================  =========
 single      1 answer, greedy                       c
+long        1 answer, greedy, five lines allowed   2c
 vote3       3 sampled answers                      3c
 vote5       5 sampled answers                      5c
 vote6       6 sampled answers                      6c
@@ -144,6 +145,20 @@ def single(q: Question, model: str, proto: Protocol) -> Steps:
     return _outcome(verdict, p, ledger, done, int(answer.verdict is None))
 
 
+def long_single(q: Question, model: str, proto: Protocol) -> Steps:
+    """One greedy answer with a judge's allowance: twice the cap and five lines.
+
+    A control added after the first results. It separates the room to work
+    from the bull, bear and judge structure.
+    """
+    ledger = Ledger(2 * proto.cap)
+    request = Request(model, prompts.solo_long(q), 2 * proto.cap, 0.0, proto.base_seed)
+    done = yield from _ask(ledger, [request])
+    answer = parse_answer(done[0].text)
+    verdict, p = aggregate([answer])
+    return _outcome(verdict, p, ledger, done, int(answer.verdict is None))
+
+
 def closed_book(q: Question, model: str, proto: Protocol) -> Steps:
     """One greedy answer without the filing table. Measures recall and guessing."""
     ledger = Ledger(proto.cap)
@@ -220,6 +235,7 @@ def lineup(q: Question, models: Sequence[str], proto: Protocol) -> dict[tuple[st
     for m in models:
         jobs[m, "closed_book"] = closed_book(q, m, proto)
         jobs[m, "single"] = single(q, m, proto)
+        jobs[m, "long"] = long_single(q, m, proto)
         for k in (3, 5, 6):
             jobs[m, f"vote{k}"] = vote(q, [(m, i) for i in range(k)], proto)
         jobs[m, "judge"] = judged(q, m, m, m, proto)
