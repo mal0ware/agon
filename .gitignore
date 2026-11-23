@@ -22,3 +22,9 @@ Thumbs.db
 
 # secrets
 .env
+
+# raw model logs (every prompt and response) and model weights stay local
+runs/
+models/
+*.gguf
+*.safetensors
