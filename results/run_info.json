@@ -1,0 +1,42 @@
+{
+ "date": "2026-11-23",
+ "questions": 250,
+ "filings_available": 2207,
+ "pilot_filings_skipped": 30,
+ "data_seed": 20261123,
+ "models": {
+  "qwen2.5:7b-instruct": {
+   "digest": "845dbda0ea48",
+   "parameters": "7.6B",
+   "quantisation": "Q4_K_M",
+   "family": "qwen2"
+  },
+  "gemma4:e4b-it-q4_K_M": {
+   "digest": "dc35e8d9c606",
+   "parameters": "7.5B",
+   "quantisation": "Q4_K_M",
+   "family": "gemma4"
+  }
+ },
+ "runner": "Ollama, local, one model in memory at a time",
+ "gpu": "NVIDIA GeForce RTX 3080, 10240 MiB",
+ "decoding": {
+  "temperature_sampled": 0.7,
+  "temperature_greedy": 0.0,
+  "top_p": 0.95,
+  "top_k": 40,
+  "repeat_penalty": 1.0,
+  "context_tokens": 4096,
+  "base_seed": 20261123,
+  "thinking": "off"
+ },
+ "cap_tokens_per_answer": 128,
+ "budget_tokens_per_question": 768,
+ "model_calls": 9500,
+ "calls_reused_from_an_earlier_start": 0,
+ "generated_tokens": 552915,
+ "prompt_tokens": 6619291,
+ "model_seconds": 8228,
+ "wall_seconds_this_start": 8311,
+ "paid_api_calls": 0
+}

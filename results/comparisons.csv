@@ -1,0 +1,16 @@
+config,comparison,n,difference,lo,hi,first_better,second_better,mcnemar_p
+gemma4:e4b-it-q4_K_M,debate vs vote of 6 (same budget),250,+0.028,+0.004,+0.052,9,2,0.065
+gemma4:e4b-it-q4_K_M,debate vs vote of 5,250,+0.016,-0.008,+0.040,7,3,0.344
+gemma4:e4b-it-q4_K_M,debate vs its own first round,250,+0.020,-0.004,+0.044,7,2,0.180
+gemma4:e4b-it-q4_K_M,"bull, bear, judge vs vote of 6 (same budget)",250,+0.152,+0.092,+0.208,49,11,0.000
+gemma4:e4b-it-q4_K_M,"bull, bear, judge vs single",250,+0.140,+0.084,+0.196,47,12,0.000
+gemma4:e4b-it-q4_K_M,vote of 5 vs single,250,+0.000,-0.036,+0.036,10,10,1.000
+qwen2.5:7b-instruct,debate vs vote of 6 (same budget),250,+0.012,-0.028,+0.052,15,12,0.701
+qwen2.5:7b-instruct,debate vs vote of 5,250,+0.016,-0.024,+0.056,16,12,0.572
+qwen2.5:7b-instruct,debate vs its own first round,250,+0.028,-0.008,+0.068,16,9,0.230
+qwen2.5:7b-instruct,"bull, bear, judge vs vote of 6 (same budget)",250,+0.064,-0.012,+0.140,57,41,0.129
+qwen2.5:7b-instruct,"bull, bear, judge vs single",250,+0.064,-0.012,+0.140,54,38,0.117
+qwen2.5:7b-instruct,vote of 5 vs single,250,-0.004,-0.044,+0.036,13,14,1.000
+mixed,debate vs vote of 6 (same budget),250,+0.010,-0.020,+0.040,22,21,
+mixed,debate vs its own first round,250,+0.048,+0.022,+0.074,32,10,
+mixed,"bull, bear, judge vs vote of 6 (same budget)",250,+0.120,+0.069,+0.173,57,53,

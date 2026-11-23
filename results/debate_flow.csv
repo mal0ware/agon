@@ -1,0 +1,5 @@
+config,debate,stayed_right,fixed,broken,stayed_wrong
+gemma4:e4b-it-q4_K_M,debate,193,7,2,48
+mixed,debate_aba,165,24,6,55
+mixed,debate_bab,192,10,4,44
+qwen2.5:7b-instruct,debate,153,16,9,72
