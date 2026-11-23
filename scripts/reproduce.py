@@ -96,6 +96,8 @@ def run_models(args: argparse.Namespace) -> None:
     say(f"{len(statements)} filings available, {len(questions)} questions built")
 
     backend = OllamaBackend(args.host)
+    for model in args.models:  # start with nothing loaded, so the first model gets the GPU
+        backend.unload(model)
     proto = Protocol(cap=args.cap)
     log = CallLog(run_dir / "calls.jsonl")
     already = len(log.cache)
