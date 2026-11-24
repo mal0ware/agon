@@ -1,0 +1,8 @@
+| config | short | long | said_true_short | said_true_long | change | lo | hi | p |
+|---|---|---|---|---|---|---|---|---|
+| gemma4:e4b-it-q4_K_M | single | long | 0.596 | 0.488 | -0.108 | -0.164 | -0.052 | 0.00030 |
+| gemma4:e4b-it-q4_K_M | vote6 | vote6_long | 0.584 | 0.488 | -0.096 | -0.152 | -0.044 | 0.00105 |
+| gemma4:e4b-it-q4_K_M | debate | debate_long | 0.580 | 0.500 | -0.080 | -0.132 | -0.028 | 0.00520 |
+| qwen2.5:7b-instruct | single | long | 0.564 | 0.588 | +0.024 | -0.048 | +0.096 | 0.58347 |
+| qwen2.5:7b-instruct | vote6 | vote6_long | 0.556 | 0.588 | +0.032 | -0.040 | +0.104 | 0.43738 |
+| qwen2.5:7b-instruct | debate | debate_long | 0.568 | 0.552 | -0.016 | -0.080 | +0.048 | 0.71711 |

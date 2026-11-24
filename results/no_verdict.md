@@ -1,0 +1,31 @@
+| config | comparison | no_verdict_first | no_verdict_second | first_better_where_second_had_none | difference | difference_none_as_half | lo | hi | p |
+|---|---|---|---|---|---|---|---|---|---|
+| gemma4:e4b-it-q4_K_M | debate vs vote of 6 (same budget) | 0 | 7 | 5 | +0.028 | +0.014 | -0.008 | +0.036 | 0.28724 |
+| gemma4:e4b-it-q4_K_M | debate vs vote of 5 | 0 | 1 | 1 | +0.016 | +0.014 | -0.010 | +0.038 | 0.34483 |
+| gemma4:e4b-it-q4_K_M | debate vs its own first round | 0 | 1 | 1 | +0.020 | +0.018 | -0.004 | +0.042 | 0.18199 |
+| gemma4:e4b-it-q4_K_M | bull, bear, judge vs vote of 6 (same budget) | 8 | 7 | 7 | +0.152 | +0.154 | +0.102 | +0.206 | 0.00005 |
+| gemma4:e4b-it-q4_K_M | bull, bear, judge vs single | 8 | 0 | 0 | +0.140 | +0.156 | +0.102 | +0.210 | 0.00005 |
+| gemma4:e4b-it-q4_K_M | vote of 5 vs single | 1 | 0 | 0 | +0.000 | +0.002 | -0.032 | +0.036 | 1.00000 |
+| gemma4:e4b-it-q4_K_M | single, long vs single | 0 | 0 | 0 | +0.172 | +0.172 | +0.120 | +0.224 | 0.00005 |
+| gemma4:e4b-it-q4_K_M | bull, bear, judge vs single, long | 8 | 0 | 0 | -0.032 | -0.016 | -0.048 | +0.016 | 0.40008 |
+| gemma4:e4b-it-q4_K_M | debate vs single, long | 0 | 0 | 0 | -0.156 | -0.156 | -0.208 | -0.104 | 0.00005 |
+| gemma4:e4b-it-q4_K_M | debate, long vs vote of 6, long (same budget) | 0 | 7 | 6 | +0.020 | +0.006 | -0.008 | +0.018 | 0.56482 |
+| gemma4:e4b-it-q4_K_M | debate, long vs its own first round | 0 | 0 | 0 | -0.004 | -0.004 | -0.012 | +0.000 | 1.00000 |
+| gemma4:e4b-it-q4_K_M | vote of 6, long vs single, long | 7 | 0 | 0 | +0.000 | +0.014 | -0.002 | +0.032 | 0.17404 |
+| gemma4:e4b-it-q4_K_M | debate, long vs debate | 0 | 0 | 0 | +0.176 | +0.176 | +0.128 | +0.228 | 0.00005 |
+| qwen2.5:7b-instruct | debate vs vote of 6 (same budget) | 0 | 6 | 1 | +0.012 | +0.000 | -0.040 | +0.040 | 1.00000 |
+| qwen2.5:7b-instruct | debate vs vote of 5 | 0 | 0 | 0 | +0.016 | +0.016 | -0.024 | +0.056 | 0.56212 |
+| qwen2.5:7b-instruct | debate vs its own first round | 0 | 1 | 0 | +0.028 | +0.026 | -0.012 | +0.066 | 0.23169 |
+| qwen2.5:7b-instruct | bull, bear, judge vs vote of 6 (same budget) | 0 | 6 | 5 | +0.064 | +0.052 | -0.024 | +0.128 | 0.19909 |
+| qwen2.5:7b-instruct | bull, bear, judge vs single | 0 | 1 | 0 | +0.064 | +0.062 | -0.012 | +0.138 | 0.11544 |
+| qwen2.5:7b-instruct | vote of 5 vs single | 0 | 1 | 1 | -0.004 | -0.006 | -0.046 | +0.034 | 0.84536 |
+| qwen2.5:7b-instruct | single, long vs single | 0 | 1 | 1 | +0.160 | +0.158 | +0.088 | +0.228 | 0.00005 |
+| qwen2.5:7b-instruct | bull, bear, judge vs single, long | 0 | 0 | 0 | -0.096 | -0.096 | -0.160 | -0.032 | 0.00600 |
+| qwen2.5:7b-instruct | debate vs single, long | 0 | 0 | 0 | -0.148 | -0.148 | -0.216 | -0.080 | 0.00015 |
+| qwen2.5:7b-instruct | debate, long vs vote of 6, long (same budget) | 0 | 5 | 5 | +0.048 | +0.038 | +0.004 | +0.074 | 0.04535 |
+| qwen2.5:7b-instruct | debate, long vs its own first round | 0 | 0 | 0 | +0.060 | +0.060 | +0.020 | +0.100 | 0.00645 |
+| qwen2.5:7b-instruct | vote of 6, long vs single, long | 5 | 0 | 0 | +0.044 | +0.054 | +0.016 | +0.094 | 0.00895 |
+| qwen2.5:7b-instruct | debate, long vs debate | 0 | 0 | 0 | +0.240 | +0.240 | +0.184 | +0.296 | 0.00005 |
+| mixed | debate vs vote of 6 (same budget) | 0 | 10 | 9 | +0.010 | -0.010 | -0.038 | +0.016 | 0.55102 |
+| mixed | debate vs its own first round | 0 | 0 | 0 | +0.048 | +0.048 | +0.022 | +0.074 | 0.00065 |
+| mixed | bull, bear, judge vs vote of 6 (same budget) | 4 | 10 | 10 | +0.120 | +0.107 | +0.059 | +0.158 | 0.00005 |

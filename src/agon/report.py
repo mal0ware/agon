@@ -216,6 +216,13 @@ class Cell:
         """Per-question score: 1 right, 0 wrong, or the mean over averaged variants."""
         return [float(np.mean(self.score[q])) for q in self.qids]
 
+    def no_verdict(self) -> list[float]:
+        """Per question: 1 if there was no verdict, or the share over averaged variants."""
+        return [
+            1.0 - float(np.mean(self.said_true[q])) - float(np.mean(self.said_false[q]))
+            for q in self.qids
+        ]
+
     def true_shares(self) -> list[float]:
         """Per question: 1 if the verdict was TRUE, or the share over averaged variants."""
         return [float(np.mean(self.said_true[q])) for q in self.qids]
@@ -334,6 +341,43 @@ def comparison_table(cells: Mapping[tuple[str, str], Cell]) -> list[dict[str, st
         rows = [i for i, row in enumerate(table) if row["family"] == family]
         for i, adjusted in zip(rows, holm([raw[i] for i in rows]), strict=True):
             table[i]["p_holm"] = f"{adjusted:.5f}"
+    return table
+
+
+def no_verdict_table(cells: Mapping[tuple[str, str], Cell]) -> list[dict[str, str]]:
+    """The comparisons again, with a question that has no verdict scored as half right.
+
+    A vote of 6 can split 3 to 3 with a mean probability of exactly 0.5, and
+    the protocol scores that as wrong. A debate of three agents cannot tie. This
+    table shows how much of each difference sits on such questions. It was
+    added after the results were read (post hoc) and has no multiple-testing
+    adjustment.
+    """
+    table: list[dict[str, str]] = []
+    for config in configs_of(cells):
+        for first, second, label, _family in COMPARISONS:
+            a, b = cells.get((config, first)), cells.get((config, second))
+            if a is None or b is None:
+                continue
+            na, nb = np.asarray(a.no_verdict()), np.asarray(b.no_verdict())
+            sa = np.asarray(a.scores()) + 0.5 * na
+            sb = np.asarray(b.scores()) + 0.5 * nb
+            diff, lo, hi = bootstrap_mean(list(sa - sb), seed=BOOT_SEED)
+            raw = np.asarray(a.scores()) - np.asarray(b.scores())
+            table.append(
+                {
+                    "config": config,
+                    "comparison": label,
+                    "no_verdict_first": f"{na.sum():.0f}",
+                    "no_verdict_second": f"{nb.sum():.0f}",
+                    "first_better_where_second_had_none": str(int(np.sum((raw > 0) & (nb > 0)))),
+                    "difference": f"{raw.mean():+.3f}",
+                    "difference_none_as_half": f"{diff:+.3f}",
+                    "lo": f"{lo:+.3f}",
+                    "hi": f"{hi:+.3f}",
+                    "p": f"{sign_flip_p(list(sa - sb), seed=BOOT_SEED):.5f}",
+                }
+            )
     return table
 
 
@@ -611,6 +655,7 @@ def build_report(results: Path) -> dict[str, list[dict[str, str]]]:
         "comparisons": comparison_table(cells),
         "by_template": template_table(cells),
         "debate_flow": flow_table(rows),
+        "no_verdict": no_verdict_table(cells),
         "verdict_lean": lean_table(cells),
         "verdict_lean_shift": lean_shift_table(cells),
     }

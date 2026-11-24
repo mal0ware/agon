@@ -9,6 +9,10 @@
 | gemma4:e4b-it-q4_K_M | single, long vs single | post hoc | 250 | +0.172 | +0.120 | +0.224 | 48 | 5 | 0.000 | 0.00005 | 0.00030 |
 | gemma4:e4b-it-q4_K_M | bull, bear, judge vs single, long | post hoc | 250 | -0.032 | -0.068 | +0.004 | 7 | 15 | 0.134 | 0.13314 | 0.13314 |
 | gemma4:e4b-it-q4_K_M | debate vs single, long | post hoc | 250 | -0.156 | -0.208 | -0.104 | 4 | 43 | 0.000 | 0.00005 | 0.00030 |
+| gemma4:e4b-it-q4_K_M | debate, long vs vote of 6, long (same budget) | follow-up | 250 | +0.020 | +0.000 | +0.044 | 6 | 1 | 0.125 | 0.12429 | 0.37288 |
+| gemma4:e4b-it-q4_K_M | debate, long vs its own first round | follow-up | 250 | -0.004 | -0.012 | +0.000 | 0 | 1 | 1.000 | 1.00000 | 1.00000 |
+| gemma4:e4b-it-q4_K_M | vote of 6, long vs single, long | follow-up | 250 | +0.000 | -0.020 | +0.020 | 3 | 3 | 1.000 | 1.00000 | 1.00000 |
+| gemma4:e4b-it-q4_K_M | debate, long vs debate | follow-up | 250 | +0.176 | +0.128 | +0.228 | 46 | 2 | 0.000 | 0.00005 | 0.00040 |
 | qwen2.5:7b-instruct | debate vs vote of 6 (same budget) | primary | 250 | +0.012 | -0.028 | +0.052 | 15 | 12 | 0.701 | 0.70221 | 1.00000 |
 | qwen2.5:7b-instruct | debate vs vote of 5 | secondary | 250 | +0.016 | -0.024 | +0.056 | 16 | 12 | 0.572 | 0.56212 | 1.00000 |
 | qwen2.5:7b-instruct | debate vs its own first round | secondary | 250 | +0.028 | -0.008 | +0.068 | 16 | 9 | 0.230 | 0.23104 | 1.00000 |
@@ -18,6 +22,10 @@
 | qwen2.5:7b-instruct | single, long vs single | post hoc | 250 | +0.160 | +0.092 | +0.232 | 62 | 22 | 0.000 | 0.00005 | 0.00030 |
 | qwen2.5:7b-instruct | bull, bear, judge vs single, long | post hoc | 250 | -0.096 | -0.160 | -0.032 | 24 | 48 | 0.006 | 0.00600 | 0.01200 |
 | qwen2.5:7b-instruct | debate vs single, long | post hoc | 250 | -0.148 | -0.216 | -0.080 | 21 | 58 | 0.000 | 0.00015 | 0.00045 |
+| qwen2.5:7b-instruct | debate, long vs vote of 6, long (same budget) | follow-up | 250 | +0.048 | +0.012 | +0.088 | 18 | 6 | 0.023 | 0.02445 | 0.12224 |
+| qwen2.5:7b-instruct | debate, long vs its own first round | follow-up | 250 | +0.060 | +0.020 | +0.100 | 21 | 6 | 0.006 | 0.00645 | 0.03870 |
+| qwen2.5:7b-instruct | vote of 6, long vs single, long | follow-up | 250 | +0.044 | +0.004 | +0.084 | 18 | 7 | 0.043 | 0.04315 | 0.17259 |
+| qwen2.5:7b-instruct | debate, long vs debate | follow-up | 250 | +0.240 | +0.184 | +0.296 | 64 | 4 | 0.000 | 0.00005 | 0.00040 |
 | mixed | debate vs vote of 6 (same budget) | primary | 250 | +0.010 | -0.020 | +0.040 | 22 | 21 |  | 0.61117 | 1.00000 |
 | mixed | debate vs its own first round | secondary | 250 | +0.048 | +0.022 | +0.074 | 32 | 10 |  | 0.00065 | 0.00585 |
 | mixed | bull, bear, judge vs vote of 6 (same budget) | secondary | 250 | +0.120 | +0.069 | +0.173 | 57 | 53 |  | 0.00005 | 0.00060 |

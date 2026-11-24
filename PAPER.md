@@ -16,7 +16,7 @@ All four were read on 2026-11-23 from the arXiv HTML pages. Where a detail could
 
 ## 2. Protocol
 
-Everything in this section was fixed and committed before the evaluation run started (commit `e0dbf4b`), and the text is unchanged since. The pilot that informed it is in section 5. What was added after the run is in section 4.
+Everything in this section up to the follow-up subsection was committed in `e0dbf4b`, the commit before the evaluation run's results (`87bd27d`), and that text is unchanged since. The follow-up subsection was committed in `4a96a5f`, before the follow-up results. The pilots that informed the protocol are in section 5. What was added after the first run is in section 4.
 
 ### Questions
 
@@ -97,14 +97,17 @@ The tests in `tests/test_scoring.py` check each of these against closed forms or
 
 ## 4. Results and comparison with the sources
 
-Run on 2026-11-23. 250 questions, 10,000 model calls, 603,370 generated tokens, 3.02 hours of model time on one RTX 3080. Full tables are in `results/`.
+First run on 2026-11-23, follow-up on 2026-11-24. 250 questions, 14,500 model calls in all, 1,072,580 generated tokens, 15,369 seconds (4.3 hours) of model time on one RTX 3080. The follow-up's 4,500 calls took 75 minutes of wall time. Full tables are in `results/`, and every prompt and response is in `logs/`.
 
-### Added after the run
+### Added after the first run
 
-Two things are not in the protocol above.
+Five things are not in the original protocol.
 
 1. The system `long`: one greedy answer with the prompt "Show the calculation step by step, in at most five short lines" and a cap of 2c = 256 tokens, the allowance each call of the judge panel has. I added it after seeing the judge panel score well above the vote, to find out whether the panel or the allowance was responsible. It reused the first run's raw log, so the 9,500 earlier calls were not repeated and their outcomes are byte-identical. Every comparison that involves it is marked "post hoc".
-2. The sign-flip p-values and the Holm adjustment. The protocol said nothing would be corrected. A table of 21 comparisons without a correction invites over-reading, so the table now gives a Holm-adjusted p-value within each family: primary (3 rows), secondary (12), post hoc (6).
+2. The sign-flip p-values and the Holm adjustment. The protocol said nothing would be corrected. A table of 21 comparisons without a correction invites over-reading, so the table now gives a Holm-adjusted p-value within each family: primary (3 rows), secondary (12), post hoc (6) and follow-up (8).
+3. The follow-up run with five-line votes and debates, whose design is the last subsection of section 2.
+4. A check on unresolved ties (`results/no_verdict.md`). A vote of six can split three to three, and when the stated confidences also cancel to a mean of exactly 0.5 the protocol scores the question wrong. I noticed after the results were in that this decides several of the debate's wins over the vote. The table repeats every comparison with a question that has no verdict scored as half right. It is post hoc and not adjusted.
+5. How often each system says TRUE (`results/verdict_lean.md`, `results/verdict_lean_shift.md`). An outside review of the first results pointed out that short answers lean TRUE. Post hoc and not adjusted.
 
 ### Primary comparison: debate minus vote of 6, same budget
 
@@ -114,23 +117,53 @@ Two things are not in the protocol above.
 | qwen2.5 7B | +1.2 points | -2.8 to 5.2 | 15 / 12 | 0.70 | 1.0 |
 | mixed | +1.0 points | -2.0 to 4.0 | 22 / 21 | 0.61 | 1.0 |
 
-No configuration shows a difference that survives the correction. The gemma interval excludes zero by a hair while its permutation p-value is 0.066. The two methods disagree at the margin because the result rests on 11 discordant questions. I read that as weak evidence of a small gain at most.
+No configuration shows a difference that survives the correction. The gemma interval excludes zero by a hair while its permutation p-value is 0.066. The result rests on 11 discordant questions, and 5 of gemma's 9 wins are questions where the vote of 6 tied with no verdict. Scoring those as half right gives +1.4 points (-0.8 to 3.6) for gemma, 0.0 (-4.0 to 4.0) for qwen and -1.0 (-3.8 to 1.6) for the mixed line-ups. I read that as no evidence of a gain.
+
+### Follow-up: five-line answers
+
+| model | system | accuracy |
+|---|---|---|
+| gemma4 e4b | single, long | 95.6% |
+| gemma4 e4b | vote of 3, long (debate round one) | 98.0% |
+| gemma4 e4b | vote of 6, long | 95.6% |
+| gemma4 e4b | debate, long | 97.6% |
+| qwen2.5 7B | single, long | 82.4% |
+| qwen2.5 7B | vote of 3, long (debate round one) | 85.6% |
+| qwen2.5 7B | vote of 6, long | 86.8% |
+| qwen2.5 7B | debate, long | 91.6% |
+
+| model | comparison | difference | 95% interval | wins / losses | p | Holm p |
+|---|---|---|---|---|---|---|
+| gemma4 e4b | debate, long minus vote of 6, long | +2.0 points | 0.0 to 4.4 | 6 / 1 | 0.12 | 0.37 |
+| gemma4 e4b | debate, long minus its first round | -0.4 points | -1.2 to 0.0 | 0 / 1 | 1.0 | 1.0 |
+| gemma4 e4b | vote of 6, long minus single, long | 0.0 points | -2.0 to 2.0 | 3 / 3 | 1.0 | 1.0 |
+| gemma4 e4b | debate, long minus debate | +17.6 points | 12.8 to 22.8 | 46 / 2 | <0.001 | <0.001 |
+| qwen2.5 7B | debate, long minus vote of 6, long | +4.8 points | 1.2 to 8.8 | 18 / 6 | 0.024 | 0.12 |
+| qwen2.5 7B | debate, long minus its first round | +6.0 points | 2.0 to 10.0 | 21 / 6 | 0.006 | 0.039 |
+| qwen2.5 7B | vote of 6, long minus single, long | +4.4 points | 0.4 to 8.4 | 18 / 7 | 0.043 | 0.17 |
+| qwen2.5 7B | debate, long minus debate | +24.0 points | 18.4 to 29.6 | 64 / 4 | <0.001 | <0.001 |
+
+Gemma is at its ceiling and nothing separates the systems; all 6 of the debate's wins over the vote of 6 are 3-to-3 ties in the vote, and with ties scored as half right the gap is +0.6 points (-0.8 to 1.8). For qwen the debate's second round helped: it fixed 21 majorities and broke 6, and that gain survives the Holm correction within the follow-up. The main follow-up comparison, debate against the vote of 6, does not (Holm p 0.12), and with ties scored as half right it is +3.8 points (0.4 to 7.4). Answer length is the largest effect in the follow-up too: the same debate gained 17.6 and 24.0 points from five-line answers.
+
+### Which way the errors lean
+
+The claims are half true. With two-line answers both models said TRUE more often than half the time: gemma's single answer on 59.6% of claims (53.4 to 65.5, binomial p 0.003), qwen's on 56.4% (50.2 to 62.4, p 0.04). The errors are mostly on false claims. Gemma's single answer was right on 88.0% of true claims and 68.8% of false ones; qwen's on 72.8% and 60.0%. The votes and the debates show the same lean. With five-line answers gemma's lean is gone (48.8%; the change is -10.8 points, -16.4 to -5.2) and it stays gone in the long vote and debate (48.8% and 50.0%). Qwen's does not change (58.8%; +2.4 points, -4.8 to 9.6), and its long single answer is right on 91.2% of true claims and 73.6% of false ones. In the closed-book control both models said FALSE on almost every claim, so their 50% there is the base rate.
 
 ### Claim by claim
 
 | source | claim | here |
 |---|---|---|
-| Smit et al., abstract | Debate does "not reliably outperform" simpler strategies such as self-consistency. | Agrees. Debate is within 3 points of a vote at the same budget in all three configurations. |
+| Smit et al., abstract | Debate does "not reliably outperform" simpler strategies such as self-consistency. | Agrees. With two-line answers debate is within 3 points of a vote at the same budget in all three configurations. With five-line answers it is 2.0 points above for gemma and 4.8 for qwen, neither significant after correction. |
 | Zhang et al., abstract | Debate often fails to beat chain-of-thought and self-consistency while using more computation. | Agrees. A single answer with five lines of working beat debate by 15.6 points for gemma (10.4 to 20.8) and 14.8 for qwen (8.0 to 21.6), using about a third of the generated tokens. This is a post hoc comparison. |
 | Zhang et al., abstract | Mixing different models improves debate. | Not reproduced. Mixed debate scored 78.2%, against 80.0% for gemma debating itself and 77.2% for a mixed vote. One mixed result does stand out: the second round added 4.8 points over the mixed first round (2.2 to 7.4, Holm p 0.006). A mixed vote of 6 got the same lift without the debate. |
-| Du et al., sections 2.1 and 3 | A second round of debate improves on the agents' first answers. | Direction agrees, size is small. The second round changed the majority from wrong to right more often than the reverse in every line-up (7 to 2, 16 to 9, 24 to 6, 10 to 4). The gain over the first round is +2.0 and +2.8 points for the single-model debates, with intervals that include zero. |
+| Du et al., sections 2.1 and 3 | A second round of debate improves on the agents' first answers. | Direction agrees, size is small. The second round changed the majority from wrong to right more often than the reverse in every line-up (7 to 2, 16 to 9, 24 to 6, 10 to 4). The gain over the first round is +2.0 and +2.8 points for the single-model debates, with intervals that include zero. With five-line answers it is +6.0 points for qwen (2.0 to 10.0, 21 fixed and 6 broken) and -0.4 for gemma, which was already at 98.0% after the first round. |
 | Xiao et al., section 4.2 | A bull and bear debate settled by a facilitator is part of a framework that beats rule-based baselines in a backtest. | Not tested. Nothing here trades. On checkable claims the bull, bear and judge panel beat the vote for gemma (+15.2 points, 9.2 to 20.8). It did not beat one model given the same room to work: -3.2 points for gemma (-6.8 to 0.4) and -9.6 for qwen (-16.0 to -3.2). The panel's edge over the vote came from the allowance. |
 
 ### Why the numbers differ from the sources
 
 - The models are 7B-class at 4-bit quantisation. The sources use much larger hosted models.
 - The task is arithmetic on a table with a true-or-false answer. The sources use question-answering and reasoning benchmarks, and TradingAgents uses a trading backtest.
-- The budget here is equal generated tokens with a two-line limit per answer. Du et al. do not hold cost equal. That limit turned out to cost 16 to 17 points, so the debate and the vote were both compared in a handicapped state.
+- The budget here is equal generated tokens with a two-line limit per answer. Du et al. do not hold cost equal. That limit turned out to cost 16 to 24 points. The follow-up removed it for the vote and the debate on each model alone.
 - Voting needs errors that differ between samples. Here the vote of 6 agreed with the greedy answer on 224 to 230 of 250 questions, so there was little for it to average away.
 
 ## 5. Variants tried
@@ -142,15 +175,16 @@ Counted in full. Nothing was tuned on the evaluation set.
 3. A second Ollama server with four parallel slots, to raise throughput. It was slower than one slot on this GPU. Dropped before any evaluation call.
 4. The evaluation run, once, as in section 2.
 5. The `long` control and the adjusted p-values, added after the run, as described in section 4.
+6. The follow-up run with five-line votes and debates, once, on 2026-11-24, as designed in section 2. The first run's 10,000 calls were reused from its log and not repeated.
 
-The 30 pilot filings are excluded from the evaluation set. The cap, the sample size and the templates were set from the pilots. No evaluation question was seen before the run, and the evaluation run was not repeated with other settings.
+The 30 pilot filings are excluded from the evaluation set. The cap, the sample size and the templates were set from the pilots. No evaluation question was seen before the first run, and neither run was repeated with other settings. The raw logs of both pilots are in `logs/pilot_a/` and `logs/pilot_b/`.
 
 ## 6. Not verified
 
 - The Wilson, Brier, ECE, McNemar and Holm formulas are from secondary statements or memory, as marked in section 3. The tests check them against closed forms and hand-worked values.
-- Only the abstract of Zhang et al. was read. The summaries of Du et al. and Xiao et al. rest on the arXiv HTML pages, parts of which reached me as a summary of the page.
+- Only the abstract of Zhang et al. was read. The summaries of Du et al. and Xiao et al. rest on the arXiv HTML pages, and not every section of those was read in full.
 - The author list of TradingAgents is taken from the arXiv metadata.
 - Du et al.'s rule for the final answer was not found, so the majority vote over the last round is my assumption.
 - The tagged values were not compared with the printed filings.
-- That a full rerun reproduces every response was not tested. The committed tables do rebuild exactly from `results/outcomes.csv`.
+- That a rerun on the models reproduces every response was not tested. The committed `outcomes.csv` and every table rebuild exactly from the logged responses in `logs/`.
 - I do not know gemma4's training cutoff. The closed-book control (50.0% and 49.6%) is the evidence against recall.

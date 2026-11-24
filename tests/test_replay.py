@@ -10,7 +10,15 @@ from agon.backends import FakeBackend, Request, fake_key
 from agon.filings import synthetic_statements
 from agon.questions import build_questions, save_questions
 from agon.replay import RUN_MODELS, ReplayBackend, export_logs, log_name, rebuild_outcomes
-from agon.report import build_report, collect, lean_table, plain_name, read_outcomes, write_outcomes
+from agon.report import (
+    build_report,
+    collect,
+    lean_table,
+    no_verdict_table,
+    plain_name,
+    read_outcomes,
+    write_outcomes,
+)
 from agon.runner import CallLog, run_experiment
 from agon.systems import Protocol
 
@@ -101,3 +109,21 @@ def test_lean_table_counts_true_verdicts_and_accuracy_by_truth(tmp_path: Path) -
 def test_plain_name_removes_non_breaking_spaces() -> None:
     assert plain_name("Matson," + chr(0xA0) + "Inc.") == "Matson, Inc."
     assert plain_name("  A  B ") == "A B"
+
+
+def _row(qid: str, system: str, verdict: str) -> dict[str, str]:
+    return {
+        "qid": qid, "template": "t", "config": "m", "system": system, "truth": "1",
+        "verdict": verdict, "p_true": "0.5", "completion_tokens": "1", "prompt_tokens": "1",
+        "calls": "1", "truncated": "0", "unparsed": "0", "budget": "1",
+    }  # fmt: skip
+
+
+def test_a_question_with_no_verdict_counts_half_in_the_sensitivity_table() -> None:
+    rows = [_row("q1", "debate", "1"), _row("q1", "vote6", ""),
+            _row("q2", "debate", "1"), _row("q2", "vote6", "1")]  # fmt: skip
+    table = {r["comparison"]: r for r in no_verdict_table(collect(rows))}
+    row = table["debate vs vote of 6 (same budget)"]
+    assert row["difference"] == "+0.500"
+    assert row["difference_none_as_half"] == "+0.250"
+    assert (row["no_verdict_second"], row["first_better_where_second_had_none"]) == ("1", "1")

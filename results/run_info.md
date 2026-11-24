@@ -1,6 +1,6 @@
 # Run information
 
-- date: 2026-11-23
+- dates: ['2026-11-23', '2026-11-24']
 - questions: 250
 - filings_available: 2207
 - pilot_filings_skipped: 30
@@ -9,7 +9,7 @@
   - qwen2.5:7b-instruct: {"digest": "845dbda0ea48", "parameters": "7.6B", "quantisation": "Q4_K_M", "family": "qwen2"}
   - gemma4:e4b-it-q4_K_M: {"digest": "dc35e8d9c606", "parameters": "7.5B", "quantisation": "Q4_K_M", "family": "gemma4"}
 - runner: Ollama, local, one model in memory at a time
-- gpu: unknown
+- gpu: NVIDIA GeForce RTX 3080, 10240 MiB
 - decoding:
   - temperature_sampled: 0.7
   - temperature_greedy: 0.0
@@ -21,10 +21,10 @@
   - thinking: off
 - cap_tokens_per_answer: 128
 - budget_tokens_per_question: 768
-- model_calls: 10000
-- calls_reused_from_an_earlier_start: 9500
-- generated_tokens: 603370
-- prompt_tokens: 6929974
-- model_seconds: 10881
-- wall_seconds_this_start: 2656
+- model_calls: 14500
+- calls_reused_from_an_earlier_start: 10000
+- generated_tokens: 1072580
+- prompt_tokens: 10217455
+- model_seconds: 15369
+- wall_seconds_this_start: 4516
 - paid_api_calls: 0
