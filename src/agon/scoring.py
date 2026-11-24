@@ -97,3 +97,39 @@ def mcnemar_exact(only_first: int, only_second: int) -> float:
     k = min(only_first, only_second)
     tail = sum(math.comb(n, i) for i in range(k + 1)) / 2**n
     return float(min(1.0, 2.0 * tail))
+
+
+def sign_flip_p(differences: Sequence[float], n_perm: int = 20_000, seed: int = 0) -> float:
+    """Two-sided paired permutation test of a mean difference of zero.
+
+    Under the null the sign of each question's difference is arbitrary, so the
+    signs are flipped at random and the share of flips with a mean at least as
+    far from zero as the observed one is the p-value (with the usual add-one
+    correction). For right-or-wrong scores this is the Monte Carlo version of
+    the exact McNemar test; it also works for the averaged mixed systems.
+    """
+    d = np.asarray(differences, dtype=float)
+    d = d[d != 0.0]
+    if len(d) == 0:
+        return 1.0
+    observed = abs(d.sum())
+    rng = np.random.default_rng(seed)
+    signs = rng.choice(np.array([-1.0, 1.0]), size=(n_perm, len(d)))
+    sums = np.abs(signs @ d)
+    return float((np.sum(sums >= observed - 1e-12) + 1) / (n_perm + 1))
+
+
+def holm(p_values: Sequence[float]) -> list[float]:
+    """Holm (1979) step-down adjusted p-values, in the order given.
+
+    Sort the m p-values ascending; the i-th smallest (i from 0) is multiplied by
+    (m - i), then a running maximum keeps the adjusted values monotone, capped at 1.
+    """
+    m = len(p_values)
+    order = sorted(range(m), key=lambda i: p_values[i])
+    adjusted = [0.0] * m
+    running = 0.0
+    for rank, i in enumerate(order):
+        running = max(running, min(1.0, (m - rank) * p_values[i]))
+        adjusted[i] = running
+    return adjusted

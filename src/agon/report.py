@@ -22,7 +22,15 @@ import numpy as np
 
 from agon.questions import Question
 from agon.runner import JobKey
-from agon.scoring import bootstrap_ece, bootstrap_mean, brier, mcnemar_exact, wilson_interval
+from agon.scoring import (
+    bootstrap_ece,
+    bootstrap_mean,
+    brier,
+    holm,
+    mcnemar_exact,
+    sign_flip_p,
+    wilson_interval,
+)
 from agon.systems import Outcome
 
 OUTCOME_FIELDS = (
@@ -54,15 +62,18 @@ LABELS = {
     "judge": "bull, bear, judge",
     "debate": "debate",
 }
+# (first, second, label, family). The primary family was fixed before the run.
+# "post hoc" rows involve the long single answer, which was added after the first results.
 COMPARISONS = (
-    ("debate", "vote6", "debate vs vote of 6 (same budget)"),
-    ("debate", "vote5", "debate vs vote of 5"),
-    ("debate", "vote3", "debate vs its own first round"),
-    ("judge", "vote6", "bull, bear, judge vs vote of 6 (same budget)"),
-    ("judge", "single", "bull, bear, judge vs single"),
-    ("judge", "long", "bull, bear, judge vs single, long"),
-    ("long", "single", "single, long vs single"),
-    ("vote5", "single", "vote of 5 vs single"),
+    ("debate", "vote6", "debate vs vote of 6 (same budget)", "primary"),
+    ("debate", "vote5", "debate vs vote of 5", "secondary"),
+    ("debate", "vote3", "debate vs its own first round", "secondary"),
+    ("judge", "vote6", "bull, bear, judge vs vote of 6 (same budget)", "secondary"),
+    ("judge", "single", "bull, bear, judge vs single", "secondary"),
+    ("vote5", "single", "vote of 5 vs single", "secondary"),
+    ("long", "single", "single, long vs single", "post hoc"),
+    ("judge", "long", "bull, bear, judge vs single, long", "post hoc"),
+    ("debate", "long", "debate vs single, long", "post hoc"),
 )
 BOOT_SEED = 20261123
 
@@ -241,10 +252,16 @@ def summary_table(cells: Mapping[tuple[str, str], Cell]) -> list[dict[str, str]]
 
 
 def comparison_table(cells: Mapping[tuple[str, str], Cell]) -> list[dict[str, str]]:
-    """Paired accuracy differences on the same questions."""
+    """Paired accuracy differences on the same questions.
+
+    Each row has a bootstrap interval, a sign-flip permutation p-value, and that
+    p-value Holm-adjusted within its family (primary, secondary or post hoc)
+    across all configurations.
+    """
     table: list[dict[str, str]] = []
+    raw: list[float] = []
     for config in configs_of(cells):
-        for first, second, label in COMPARISONS:
+        for first, second, label, family in COMPARISONS:
             a, b = cells.get((config, first)), cells.get((config, second))
             if a is None or b is None:
                 continue
@@ -252,10 +269,12 @@ def comparison_table(cells: Mapping[tuple[str, str], Cell]) -> list[dict[str, st
             diff, lo, hi = bootstrap_mean(list(sa - sb), seed=BOOT_SEED)
             binary = len(a.variants) == 1 and len(b.variants) == 1
             wins, losses = int(np.sum(sa > sb)), int(np.sum(sa < sb))
+            raw.append(sign_flip_p(list(sa - sb), seed=BOOT_SEED))
             table.append(
                 {
                     "config": config,
                     "comparison": label,
+                    "family": family,
                     "n": str(len(sa)),
                     "difference": f"{diff:+.3f}",
                     "lo": f"{lo:+.3f}",
@@ -263,8 +282,13 @@ def comparison_table(cells: Mapping[tuple[str, str], Cell]) -> list[dict[str, st
                     "first_better": str(wins),
                     "second_better": str(losses),
                     "mcnemar_p": f"{mcnemar_exact(wins, losses):.3f}" if binary else "",
+                    "p": f"{raw[-1]:.5f}",
                 }
             )
+    for family in ("primary", "secondary", "post hoc"):
+        rows = [i for i, row in enumerate(table) if row["family"] == family]
+        for i, adjusted in zip(rows, holm([raw[i] for i in rows]), strict=True):
+            table[i]["p_holm"] = f"{adjusted:.5f}"
     return table
 
 
@@ -430,7 +454,7 @@ def figure_calibration(path: Path, cells: Mapping[tuple[str, str], Cell]) -> Non
         _style(ax)
     first = np.atleast_1d(axes)[0]
     first.set_ylabel("Accuracy in the bin, %", fontsize=9, color=MUTED)
-    first.set_ylim(30, 102)
+    first.set_ylim(0, 102)
     first.legend(frameon=False, fontsize=8, labelcolor=INK, loc="lower right")
     fig.tight_layout()
     fig.savefig(path, dpi=150)

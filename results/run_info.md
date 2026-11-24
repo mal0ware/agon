@@ -9,7 +9,7 @@
   - qwen2.5:7b-instruct: {"digest": "845dbda0ea48", "parameters": "7.6B", "quantisation": "Q4_K_M", "family": "qwen2"}
   - gemma4:e4b-it-q4_K_M: {"digest": "dc35e8d9c606", "parameters": "7.5B", "quantisation": "Q4_K_M", "family": "gemma4"}
 - runner: Ollama, local, one model in memory at a time
-- gpu: NVIDIA GeForce RTX 3080, 10240 MiB
+- gpu: unknown
 - decoding:
   - temperature_sampled: 0.7
   - temperature_greedy: 0.0
@@ -21,10 +21,10 @@
   - thinking: off
 - cap_tokens_per_answer: 128
 - budget_tokens_per_question: 768
-- model_calls: 9500
-- calls_reused_from_an_earlier_start: 0
-- generated_tokens: 552915
-- prompt_tokens: 6619291
-- model_seconds: 8228
-- wall_seconds_this_start: 8311
+- model_calls: 10000
+- calls_reused_from_an_earlier_start: 9500
+- generated_tokens: 603370
+- prompt_tokens: 6929974
+- model_seconds: 10881
+- wall_seconds_this_start: 2656
 - paid_api_calls: 0

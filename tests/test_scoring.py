@@ -5,7 +5,15 @@ import math
 import numpy as np
 import pytest
 
-from agon.scoring import bootstrap_mean, brier, ece, mcnemar_exact, wilson_interval
+from agon.scoring import (
+    bootstrap_mean,
+    brier,
+    ece,
+    holm,
+    mcnemar_exact,
+    sign_flip_p,
+    wilson_interval,
+)
 
 
 def test_wilson_matches_a_hand_computed_value() -> None:
@@ -83,3 +91,26 @@ def test_bootstrap_is_seeded_and_close_to_the_normal_interval() -> None:
 
 def test_bootstrap_of_a_constant_is_exact() -> None:
     assert bootstrap_mean([0.25] * 30, n_boot=200, seed=1) == (0.25, 0.25, 0.25)
+
+
+def test_holm_worked_example() -> None:
+    # Sorted: 0.01, 0.02, 0.03, 0.04 -> 0.04, 0.06, 0.06, 0.06 after the running maximum.
+    assert holm([0.04, 0.01, 0.03, 0.02]) == pytest.approx([0.06, 0.04, 0.06, 0.06])
+    assert holm([0.5, 0.9]) == pytest.approx([1.0, 1.0])
+    assert holm([0.02]) == [0.02]
+    assert holm([]) == []
+
+
+def test_sign_flip_agrees_with_exact_mcnemar() -> None:
+    # 12 wins against 3 losses and 85 ties: exact two-sided p = 2 * P(X <= 3 | 15, 1/2).
+    d = [1.0] * 12 + [-1.0] * 3 + [0.0] * 85
+    exact = mcnemar_exact(12, 3)
+    assert exact == pytest.approx(2 * (1 + 15 + 105 + 455) / 2**15)
+    assert sign_flip_p(d, n_perm=100_000, seed=1) == pytest.approx(exact, abs=0.004)
+    assert sign_flip_p(d, seed=2) == sign_flip_p(d, seed=2)
+
+
+def test_sign_flip_limits() -> None:
+    assert sign_flip_p([0.0] * 20) == 1.0
+    assert sign_flip_p([1.0, -1.0] * 50, seed=3) > 0.9
+    assert sign_flip_p([0.5] * 30, seed=3) < 0.001
