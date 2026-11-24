@@ -16,7 +16,7 @@ All four were read on 2026-11-23 from the arXiv HTML pages. Where a detail could
 
 ## 2. Protocol
 
-Everything in this section was fixed and committed before the evaluation run started. The pilot that informed it is described in section 5.
+Everything in this section was fixed and committed before the evaluation run started (commit `e0dbf4b`), and the text is unchanged since. The pilot that informed it is in section 5. What was added after the run is in section 4.
 
 ### Questions
 
@@ -75,6 +75,68 @@ A ledger per system per question counts generated tokens. A call must be reserve
 | Expected calibration error | `Σ_b (n_b / n) · abs(acc_b − conf_b)` over 5 equal bins of confidence on [0.5, 1] | Naeini, Cooper and Hauskrecht (2015); Guo et al. (2017), "On Calibration of Modern Neural Networks", equation 3. Written from memory of equation 3 and not re-read today. |
 | McNemar exact test | two-sided binomial tail on the discordant pairs with success probability 1/2 | McNemar (1947), Psychometrika 12; the exact binomial form is the standard small-sample version. Secondary. |
 | Majority of independent voters | `Σ_{k>n/2} C(n,k) p^k (1−p)^(n−k)` | Condorcet's jury theorem. Used only in a test of the fake backend. |
+| Sign-flip permutation test | flip the sign of each question's paired difference at random 20,000 times; p = (number of flips with an absolute sum at least the observed one, plus 1) / 20,001 | Fisher's randomisation test for paired data, in the usual Monte Carlo form with the add-one correction. Secondary. |
+| Holm adjustment | sort the m p-values ascending, multiply the i-th (counting from 0) by m − i, take a running maximum, cap at 1 | Holm (1979), "A simple sequentially rejective multiple test procedure", Scand. J. Statist. 6. Secondary statement; I did not read the paper. |
 | Paired bootstrap | resample questions with replacement, recompute the mean difference, take the 2.5 and 97.5 percentiles | Efron and Tibshirani (1993), percentile method. Secondary. |
 
 The tests in `tests/test_scoring.py` check each of these against closed forms or hand-worked values.
+
+## 4. Results and comparison with the sources
+
+Run on 2026-11-23. 250 questions, 10,000 model calls, 603,370 generated tokens, 3.02 hours of model time on one RTX 3080. Full tables are in `results/`.
+
+### Added after the run
+
+Two things are not in the protocol above.
+
+1. The system `long`: one greedy answer with the prompt "Show the calculation step by step, in at most five short lines" and a cap of 2c = 256 tokens, the allowance each call of the judge panel has. I added it after seeing the judge panel score well above the vote, to find out whether the panel or the allowance was responsible. It reused the first run's raw log, so the 9,500 earlier calls were not repeated and their outcomes are byte-identical. Every comparison that involves it is marked "post hoc".
+2. The sign-flip p-values and the Holm adjustment. The protocol said nothing would be corrected. A table of 21 comparisons without a correction invites over-reading, so the table now gives a Holm-adjusted p-value within each family: primary (3 rows), secondary (12), post hoc (6).
+
+### Primary comparison: debate minus vote of 6, same budget
+
+| configuration | difference | 95% interval | wins / losses | p | Holm p |
+|---|---|---|---|---|---|
+| gemma4 e4b | +2.8 points | 0.4 to 5.2 | 9 / 2 | 0.066 | 0.20 |
+| qwen2.5 7B | +1.2 points | -2.8 to 5.2 | 15 / 12 | 0.70 | 1.0 |
+| mixed | +1.0 points | -2.0 to 4.0 | 22 / 21 | 0.61 | 1.0 |
+
+No configuration shows a difference that survives the correction. The gemma interval excludes zero by a hair while its permutation p-value is 0.066. The two methods disagree at the margin because the result rests on 11 discordant questions. I read that as weak evidence of a small gain at most.
+
+### Claim by claim
+
+| source | claim | here |
+|---|---|---|
+| Smit et al., abstract | Debate does "not reliably outperform" simpler strategies such as self-consistency. | Agrees. Debate is within 3 points of a vote at the same budget in all three configurations. |
+| Zhang et al., abstract | Debate often fails to beat chain-of-thought and self-consistency while using more computation. | Agrees. A single answer with five lines of working beat debate by 15.6 points for gemma (10.4 to 20.8) and 14.8 for qwen (8.0 to 21.6), using about a third of the generated tokens. This is a post hoc comparison. |
+| Zhang et al., abstract | Mixing different models improves debate. | Not reproduced. Mixed debate scored 78.2%, against 80.0% for gemma debating itself and 77.2% for a mixed vote. One mixed result does stand out: the second round added 4.8 points over the mixed first round (2.2 to 7.4, Holm p 0.006). A mixed vote of 6 got the same lift without the debate. |
+| Du et al., sections 2.1 and 3 | A second round of debate improves on the agents' first answers. | Direction agrees, size is small. The second round changed the majority from wrong to right more often than the reverse in every line-up (7 to 2, 16 to 9, 24 to 6, 10 to 4). The gain over the first round is +2.0 and +2.8 points for the single-model debates, with intervals that include zero. |
+| Xiao et al., section 4.2 | A bull and bear debate settled by a facilitator is part of a framework that beats rule-based baselines in a backtest. | Not tested. Nothing here trades. On checkable claims the bull, bear and judge panel beat the vote for gemma (+15.2 points, 9.2 to 20.8). It did not beat one model given the same room to work: -3.2 points for gemma (-6.8 to 0.4) and -9.6 for qwen (-16.0 to -3.2). The panel's edge over the vote came from the allowance. |
+
+### Why the numbers differ from the sources
+
+- The models are 7B-class at 4-bit quantisation. The sources use much larger hosted models.
+- The task is arithmetic on a table with a true-or-false answer. The sources use question-answering and reasoning benchmarks, and TradingAgents uses a trading backtest.
+- The budget here is equal generated tokens with a two-line limit per answer. Du et al. do not hold cost equal. That limit turned out to cost 16 to 17 points, so the debate and the vote were both compared in a handicapped state.
+- Voting needs errors that differ between samples. Here the vote of 6 agreed with the greedy answer on 224 to 230 of 250 questions, so there was little for it to average away.
+
+## 5. Variants tried
+
+Counted in full. Nothing was tuned on the evaluation set.
+
+1. Pilot A, 12 filings from the pilot slice. Four claim templates, thresholds 5%, 10% and 20% from the real value, cap 128. Single answers scored 92% and 100%. That is too easy to separate any two systems. Dropped.
+2. Pilot B, 18 filings from the pilot slice. The current six templates, thresholds 1%, 2% and 4%, and the brevity sentence reworded from "at most two short lines" to "only the calculation, in one or two short lines" to reduce truncated judge rulings. Single answers scored 67% on both models. Kept. This is the protocol in section 2.
+3. A second Ollama server with four parallel slots, to raise throughput. It was slower than one slot on this GPU. Dropped before any evaluation call.
+4. The evaluation run, once, as in section 2.
+5. The `long` control and the adjusted p-values, added after the run, as described in section 4.
+
+The 30 pilot filings are excluded from the evaluation set. The cap, the sample size and the templates were set from the pilots. No evaluation question was seen before the run, and the evaluation run was not repeated with other settings.
+
+## 6. Not verified
+
+- The Wilson, Brier, ECE, McNemar and Holm formulas are from secondary statements or memory, as marked in section 3. The tests check them against closed forms and hand-worked values.
+- Only the abstract of Zhang et al. was read. The summaries of Du et al. and Xiao et al. rest on the arXiv HTML pages, parts of which reached me as a summary of the page.
+- The author list of TradingAgents is taken from the arXiv metadata.
+- Du et al.'s rule for the final answer was not found, so the majority vote over the last round is my assumption.
+- The tagged values were not compared with the printed filings.
+- That a full rerun reproduces every response was not tested. The committed tables do rebuild exactly from `results/outcomes.csv`.
+- I do not know gemma4's training cutoff. The closed-book control (50.0% and 49.6%) is the evidence against recall.
