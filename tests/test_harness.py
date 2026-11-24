@@ -90,8 +90,9 @@ def test_shared_calls_run_once_and_the_log_is_a_checkpoint(tmp_path: Path) -> No
     backend = FakeBackend(TRUTH, {"a": 0.7, "b": 0.6})
     first = run_experiment(QUESTIONS[:10], ["a", "b"], backend, PROTO, CallLog(path))
     # Per question: 2 x (closed book, single, 6 samples, bull, bear, judge, 3 revisions)
-    # = 28, plus 2 long answers, 6 mixed revisions and 4 mixed judges = 40.
-    assert backend.calls == 10 * 40
+    # = 28, plus 2 long answers, 6 mixed revisions and 4 mixed judges = 40, plus
+    # 2 x (6 five-line samples and 3 five-line revisions) = 18 for the follow-up.
+    assert backend.calls == 10 * 58
     lines = path.read_text(encoding="utf-8").splitlines()
     assert len(lines) == backend.calls
     record = json.loads(lines[0])
@@ -145,6 +146,6 @@ def test_report_is_identical_when_built_twice(tmp_path: Path) -> None:
     assert (folders[0] / "fig_headline.png").stat().st_size > 5_000
 
     rows = read_outcomes(folders[0] / "outcomes.csv")
-    assert len(rows) == 60 * (8 + 8 + 9)
+    assert len(rows) == 60 * (11 + 11 + 9)
     summary = (folders[0] / "summary.md").read_text(encoding="utf-8")
     assert "debate" in summary and "mixed" in summary

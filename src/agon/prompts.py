@@ -15,6 +15,7 @@ BRIEF = (
     "Show only the calculation, in one or two short lines of plain text. "
     "Do not restate the claim or the data."
 )
+LONG = "Show the calculation step by step, in at most five short lines of plain text."
 PEERS_HEADER = "These are the answers from other agents:"
 PEERS_FOOTER = "Using the other agents' answers as additional advice"
 BULL_ROLE = "You argue that the claim is TRUE."
@@ -38,8 +39,7 @@ def solo_long(q: Question) -> str:
     """One agent with the room an advocate or a judge gets: five lines, not two."""
     return (
         _head(q) + "Decide whether the claim is true or false using only the filing data above. "
-        "Show the calculation step by step, in at most five short lines of plain text.\n"
-        + ANSWER_FORMAT
+        f"{LONG}\n" + ANSWER_FORMAT
     )
 
 
@@ -74,12 +74,15 @@ def judge(q: Question, bull: str, bear: str) -> str:
     )
 
 
-def revise(q: Question, own: str, others: Sequence[str]) -> str:
-    """Round two of the debate, after Du et al. (2023), section 2.1."""
+def revise(q: Question, own: str, others: Sequence[str], long: bool = False) -> str:
+    """Round two of the debate, after Du et al. (2023), section 2.1.
+
+    With ``long`` the agent gets five lines instead of two, as in :func:`solo_long`.
+    """
     peers = "\n\n".join(f"Agent {i + 1}:\n{text.strip()}" for i, text in enumerate(others))
     return (
         _head(q) + f"Your earlier answer:\n{own.strip()}\n\n"
         f"{PEERS_HEADER}\n\n{peers}\n\n"
         f"{PEERS_FOOTER}, give an updated answer. "
-        f"{BRIEF}\n" + ANSWER_FORMAT
+        f"{LONG if long else BRIEF}\n" + ANSWER_FORMAT
     )

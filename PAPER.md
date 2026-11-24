@@ -66,6 +66,20 @@ A ledger per system per question counts generated tokens. A call must be reserve
 - Secondary: debate minus vote of 5, debate minus vote of 3, judge minus vote of 6, judge minus single, vote of 5 minus single.
 - Intervals: Wilson for a single accuracy, percentile bootstrap over questions (10,000 resamples, seed 20261123) for paired differences, Brier scores and averaged mixed systems. Exact McNemar p-values for paired binary comparisons. Nothing is corrected for multiple comparisons; there are 15 paired comparisons in the table.
 
+### Follow-up run: vote and debate with five-line answers
+
+Written on 2026-11-24, after the first results and before the follow-up run. It is committed in the same commit as the code that runs it.
+
+The first run found that one answer with five lines of working scored 16 to 17 points above one answer held to two lines. Vote and debate were only run with two-line answers. The follow-up runs them with five.
+
+- Same 250 questions, same two models (same digests), same decoding settings. The 10,000 calls of the first run are reused from its log and not repeated.
+- Each model alone. No mixed line-ups, to keep the run to about 4,500 calls.
+- `vote of 6, long`: six sampled answers with the prompt of `single, long` (five lines), a cap of 2c = 256 tokens each, temperature 0.7, seeds base + i.
+- `debate, long`: three agents. Round one is the first three samples of `vote of 6, long`. Round two is the debate's revision prompt with the five-line instruction in place of the two-line one, cap 2c, seeds base + 100 + agent index.
+- `vote of 3, long` is the debate's own first round.
+- Budget: 12c = 1,536 generated tokens per question for `vote of 6, long` and `debate, long`. That is twice the budget of the first run, because each answer is allowed twice the tokens.
+- Comparisons, paired by question, for each model: debate, long minus vote of 6, long (the main one); debate, long minus its own first round; vote of 6, long minus single, long; debate, long minus debate. Bootstrap intervals and sign-flip p-values as in the first run, Holm-adjusted within these 8 rows.
+
 ## 3. Formulas
 
 | quantity | formula | source |

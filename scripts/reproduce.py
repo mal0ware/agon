@@ -3,8 +3,9 @@
 Three modes:
 
     uv run python scripts/reproduce.py
-        Rebuild every table and figure in results/ from the committed
-        per-question outcomes (results/outcomes.csv). Seconds, no GPU.
+        Replay every system from the committed raw logs in logs/ to rebuild
+        results/outcomes.csv, then rebuild every table and figure in results/
+        from it. Under a minute, no GPU, no model.
 
     uv run python scripts/reproduce.py --fast
         Also run the whole pipeline end to end against the fake backend on
@@ -14,8 +15,9 @@ Three modes:
     uv run python scripts/reproduce.py --run-models
         Run the experiment again on local models through Ollama. Needs
         scripts/fetch_data.py to have been run, the two models pulled, and a
-        few hours of GPU time. Overwrites results/. Raw prompts and responses
-        go to runs/, which git ignores.
+        few hours of GPU time. Overwrites results/ and logs/. The working log
+        goes to runs/, which git ignores, and is then copied into logs/
+        compressed, one file per model.
 """
 
 from __future__ import annotations
@@ -32,15 +34,17 @@ from agon import backends
 from agon.backends import FakeBackend, OllamaBackend, fake_key
 from agon.filings import build_statements, frame_names, synthetic_statements
 from agon.questions import build_questions, order_statements, save_questions
+from agon.replay import QUESTIONS_FILE, RUN_MODELS, export_logs, rebuild_outcomes
 from agon.report import build_report, write_outcomes, write_questions
 from agon.runner import CallLog, run_experiment
 from agon.systems import Protocol
 
 ROOT = Path(__file__).resolve().parents[1]
 RESULTS = ROOT / "results"
+LOGS = ROOT / "logs"
 DATA_SEED = 20261123
 PILOT = 30  # companies at the head of the fixed shuffle, used only to set up the run
-MODELS = ("qwen2.5:7b-instruct", "gemma4:e4b-it-q4_K_M")
+MODELS = RUN_MODELS
 
 
 def say(message: str) -> None:
@@ -67,17 +71,30 @@ def fast() -> None:
 
 
 def gpu_name() -> str:
+    """The GPU, read before any model is loaded. The first run read it at the end
+    of the run, got no answer from nvidia-smi and recorded "unknown"."""
     try:
         done = subprocess.run(
             ["nvidia-smi", "--query-gpu=name,memory.total", "--format=csv,noheader"],
             capture_output=True,
             text=True,
-            timeout=20,
+            timeout=60,
             check=True,
         )
         return done.stdout.strip().splitlines()[0]
-    except (OSError, subprocess.SubprocessError, IndexError):
-        return "unknown"
+    except (OSError, subprocess.SubprocessError, IndexError) as error:
+        return f"unknown ({type(error).__name__})"
+
+
+def rebuild_from_logs() -> bool:
+    """Rebuild results/outcomes.csv and questions.csv from the committed logs."""
+    if not (LOGS / QUESTIONS_FILE).exists():
+        return False
+    questions, outcomes = rebuild_outcomes(LOGS, MODELS)
+    write_questions(RESULTS / "questions.csv", questions)
+    write_outcomes(RESULTS / "outcomes.csv", questions, outcomes)
+    say(f"rebuilt outcomes.csv from {LOGS.name}/: {len(outcomes)} rows, no model calls")
+    return True
 
 
 def run_models(args: argparse.Namespace) -> None:
@@ -95,6 +112,7 @@ def run_models(args: argparse.Namespace) -> None:
     save_questions(questions, run_dir / "questions.json")
     say(f"{len(statements)} filings available, {len(questions)} questions built")
 
+    gpu = gpu_name()
     backend = OllamaBackend(args.host)
     for model in args.models:  # start with nothing loaded, so the first model gets the GPU
         backend.unload(model)
@@ -112,15 +130,22 @@ def run_models(args: argparse.Namespace) -> None:
     RESULTS.mkdir(exist_ok=True)
     write_questions(RESULTS / "questions.csv", questions)
     write_outcomes(RESULTS / "outcomes.csv", questions, outcomes)
+    counts = export_logs(run_dir / "calls.jsonl", run_dir / "questions.json", LOGS, args.models)
+    say(f"raw logs written to {LOGS.name}/: {counts}")
+    dates = [date.today().isoformat()]
+    old = RESULTS / "run_info.json"
+    if old.exists():
+        previous = json.loads(old.read_text(encoding="utf-8"))
+        dates += previous.get("dates", [previous["date"]] if "date" in previous else [])
     run_info = {
-        "date": date.today().isoformat(),
+        "dates": sorted(set(dates)),
         "questions": len(questions),
         "filings_available": len(statements),
         "pilot_filings_skipped": PILOT,
         "data_seed": DATA_SEED,
         "models": {m: info.get(m, {}) for m in args.models},
         "runner": "Ollama, local, one model in memory at a time",
-        "gpu": gpu_name(),
+        "gpu": gpu,
         "decoding": {
             "temperature_sampled": proto.temperature,
             "temperature_greedy": 0.0,
@@ -162,6 +187,8 @@ def main() -> None:
         fast()
     if args.run_models:
         run_models(args)
+    else:
+        rebuild_from_logs()
     if (RESULTS / "outcomes.csv").exists():
         tables = build_report(RESULTS)
         say(f"rebuilt {len(tables)} tables and 3 figures in {RESULTS}")

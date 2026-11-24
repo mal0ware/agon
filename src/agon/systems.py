@@ -17,12 +17,19 @@ vote5       5 sampled answers                      5c
 vote6       6 sampled answers                      6c
 judge       bull 2c, bear 2c, judge 2c             6c
 debate      3 answers, then 3 revised answers      6c
+vote3_long  3 sampled answers, five lines, 2c      6c
+vote6_long  6 sampled answers, five lines, 2c      12c
+debate_long 3 + 3 answers, five lines, 2c each     12c
 ==========  =====================================  =========
 
 The debate's first round is the same three calls as vote3, with the same
 prompts and seeds. So debate against vote6 asks one thing: once three agents
 have answered, is it better to let them read each other and answer again, or
 to draw three more independent answers?
+
+The ``_long`` systems repeat that design with the five-line prompt of
+:func:`agon.prompts.solo_long` and twice the cap per answer. They were added
+after the first run, as a follow-up, and are run on each model alone.
 """
 
 from __future__ import annotations
@@ -101,9 +108,14 @@ def aggregate(answers: Sequence[Answer]) -> tuple[bool | None, float]:
     return p > 0.5, p
 
 
-def _answer_request(q: Question, member: Member, proto: Protocol) -> Request:
+def _answer_request(q: Question, member: Member, proto: Protocol, long: bool = False) -> Request:
+    """A sampled answer. ``long`` gives the five-line prompt and twice the cap."""
     model, sample = member
-    return Request(model, prompts.solo(q), proto.cap, proto.temperature, proto.base_seed + sample)
+    if long:
+        prompt, cap = prompts.solo_long(q), 2 * proto.cap
+    else:
+        prompt, cap = prompts.solo(q), proto.cap
+    return Request(model, prompt, cap, proto.temperature, proto.base_seed + sample)
 
 
 def _outcome(
@@ -169,27 +181,29 @@ def closed_book(q: Question, model: str, proto: Protocol) -> Steps:
     return _outcome(verdict, p, ledger, done, int(answer.verdict is None))
 
 
-def vote(q: Question, members: Sequence[Member], proto: Protocol) -> Steps:
+def vote(q: Question, members: Sequence[Member], proto: Protocol, long: bool = False) -> Steps:
     """Independent sampled answers and a majority vote."""
-    ledger = Ledger(len(members) * proto.cap)
-    done = yield from _ask(ledger, [_answer_request(q, m, proto) for m in members])
+    cap = 2 * proto.cap if long else proto.cap
+    ledger = Ledger(len(members) * cap)
+    done = yield from _ask(ledger, [_answer_request(q, m, proto, long) for m in members])
     answers = [parse_answer(c.text) for c in done]
     verdict, p = aggregate(answers)
     return _outcome(verdict, p, ledger, done, sum(a.verdict is None for a in answers))
 
 
-def debate(q: Question, agents: Sequence[Member], proto: Protocol) -> Steps:
+def debate(q: Question, agents: Sequence[Member], proto: Protocol, long: bool = False) -> Steps:
     """Two rounds. Each agent answers, reads the others, and answers again."""
-    ledger = Ledger(2 * len(agents) * proto.cap)
-    first = yield from _ask(ledger, [_answer_request(q, m, proto) for m in agents])
+    cap = 2 * proto.cap if long else proto.cap
+    ledger = Ledger(2 * len(agents) * cap)
+    first = yield from _ask(ledger, [_answer_request(q, m, proto, long) for m in agents])
     requests = []
     for i, (model, _) in enumerate(agents):
         others = [c.text for j, c in enumerate(first) if j != i]
         requests.append(
             Request(
                 model,
-                prompts.revise(q, first[i].text, others),
-                proto.cap,
+                prompts.revise(q, first[i].text, others, long),
+                cap,
                 proto.temperature,
                 proto.base_seed + 100 + i,
             )
@@ -240,6 +254,9 @@ def lineup(q: Question, models: Sequence[str], proto: Protocol) -> dict[tuple[st
             jobs[m, f"vote{k}"] = vote(q, [(m, i) for i in range(k)], proto)
         jobs[m, "judge"] = judged(q, m, m, m, proto)
         jobs[m, "debate"] = debate(q, [(m, i) for i in range(3)], proto)
+        for k in (3, 6):
+            jobs[m, f"vote{k}_long"] = vote(q, [(m, i) for i in range(k)], proto, long=True)
+        jobs[m, "debate_long"] = debate(q, [(m, i) for i in range(3)], proto, long=True)
     if len(models) == 2:
         a, b = models
         six = [(a, 0), (b, 0), (a, 1), (b, 1), (a, 2), (b, 2)]

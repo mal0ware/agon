@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import csv
 import json
+import re
 from collections import defaultdict
 from collections.abc import Mapping, Sequence
 from pathlib import Path
@@ -51,7 +52,20 @@ OUTCOME_FIELDS = (
 QUESTION_FIELDS = ("qid", "cik", "company", "accession", "template", "margin", "truth", "claim")
 
 # Systems shown in the headline, in order. Mixed variants are averaged into these names.
-HEADLINE = ("single", "long", "vote5", "vote6", "judge", "debate")
+HEADLINE = ("single", "long", "vote5", "vote6", "judge", "debate", "vote6_long", "debate_long")
+SYSTEMS = (
+    "closed_book",
+    "single",
+    "long",
+    "vote3",
+    "vote5",
+    "vote6",
+    "judge",
+    "debate",
+    "vote3_long",
+    "vote6_long",
+    "debate_long",
+)
 LABELS = {
     "closed_book": "closed book",
     "single": "single",
@@ -61,6 +75,9 @@ LABELS = {
     "vote6": "vote of 6",
     "judge": "bull, bear, judge",
     "debate": "debate",
+    "vote3_long": "vote of 3, long",
+    "vote6_long": "vote of 6, long",
+    "debate_long": "debate, long",
 }
 # (first, second, label, family). The primary family was fixed before the run.
 # "post hoc" rows involve the long single answer, which was added after the first results.
@@ -74,7 +91,13 @@ COMPARISONS = (
     ("long", "single", "single, long vs single", "post hoc"),
     ("judge", "long", "bull, bear, judge vs single, long", "post hoc"),
     ("debate", "long", "debate vs single, long", "post hoc"),
+    # The follow-up run: vote and debate with five-line answers, at 12c a question.
+    ("debate_long", "vote6_long", "debate, long vs vote of 6, long (same budget)", "follow-up"),
+    ("debate_long", "vote3_long", "debate, long vs its own first round", "follow-up"),
+    ("vote6_long", "long", "vote of 6, long vs single, long", "follow-up"),
+    ("debate_long", "debate", "debate, long vs debate", "follow-up"),
 )
+FAMILIES = ("primary", "secondary", "post hoc", "follow-up")
 BOOT_SEED = 20261123
 
 # Chart colours: one fixed hue per configuration, text in ink colours.
@@ -113,6 +136,17 @@ def write_outcomes(
             )
 
 
+def plain_name(name: str) -> str:
+    """A company name with the source's non-breaking spaces made plain.
+
+    The SEC data writes some names with a non-breaking space (U+00A0) after a
+    comma, as in Matson, Inc. A viewer that reads the CSV as Latin-1 shows that
+    space as a stray capital A with a circumflex. The prompts kept the name exactly
+    as the source gave it; only this table changes it.
+    """
+    return " ".join(name.replace(chr(0xA0), " ").split())
+
+
 def write_questions(path: Path, questions: Sequence[Question]) -> None:
     """Write the published question set: claims and answers, without the tables."""
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -121,7 +155,16 @@ def write_questions(path: Path, questions: Sequence[Question]) -> None:
         writer.writerow(QUESTION_FIELDS)
         for q in questions:
             writer.writerow(
-                [q.qid, q.cik, q.company, q.accession, q.template, q.margin, int(q.truth), q.claim]
+                [
+                    q.qid,
+                    q.cik,
+                    plain_name(q.company),
+                    q.accession,
+                    q.template,
+                    q.margin,
+                    int(q.truth),
+                    q.claim,
+                ]
             )
 
 
@@ -135,6 +178,8 @@ class Cell:
 
     def __init__(self) -> None:
         self.score: dict[str, list[float]] = defaultdict(list)
+        self.said_true: dict[str, list[float]] = defaultdict(list)
+        self.said_false: dict[str, list[float]] = defaultdict(list)
         self.p: dict[str, list[float]] = defaultdict(list)
         self.truth: dict[str, bool] = {}
         self.template: dict[str, str] = {}
@@ -152,6 +197,8 @@ class Cell:
         self.truth[qid] = truth
         self.template[qid] = row["template"]
         self.score[qid].append(float(row["verdict"] != "" and (row["verdict"] == "1") == truth))
+        self.said_true[qid].append(float(row["verdict"] == "1"))
+        self.said_false[qid].append(float(row["verdict"] == "0"))
         self.p[qid].append(float(row["p_true"]))
         self.completion.append(float(row["completion_tokens"]))
         self.prompt.append(float(row["prompt_tokens"]))
@@ -169,6 +216,10 @@ class Cell:
         """Per-question score: 1 right, 0 wrong, or the mean over averaged variants."""
         return [float(np.mean(self.score[q])) for q in self.qids]
 
+    def true_shares(self) -> list[float]:
+        """Per question: 1 if the verdict was TRUE, or the share over averaged variants."""
+        return [float(np.mean(self.said_true[q])) for q in self.qids]
+
     def probabilities(self) -> tuple[list[float], list[bool]]:
         """Every (probability, truth) pair, one per variant per question."""
         ps: list[float] = []
@@ -179,9 +230,12 @@ class Cell:
         return ps, ys
 
 
+_LINEUP = re.compile(r"_(aba|bab|abb|baa)$")
+
+
 def base_system(system: str) -> str:
     """``debate_aba`` and ``debate_bab`` both report as ``debate``."""
-    return system.split("_")[0] if system != "closed_book" else system
+    return _LINEUP.sub("", system)
 
 
 def collect(rows: Sequence[Mapping[str, str]]) -> dict[tuple[str, str], Cell]:
@@ -200,16 +254,7 @@ def summary_table(cells: Mapping[tuple[str, str], Cell]) -> list[dict[str, str]]
     """Accuracy, calibration and cost for every configuration and system."""
     table: list[dict[str, str]] = []
     for config in configs_of(cells):
-        for system in (
-            "closed_book",
-            "single",
-            "long",
-            "vote3",
-            "vote5",
-            "vote6",
-            "judge",
-            "debate",
-        ):
+        for system in SYSTEMS:
             cell = cells.get((config, system))
             if cell is None:
                 continue
@@ -285,7 +330,7 @@ def comparison_table(cells: Mapping[tuple[str, str], Cell]) -> list[dict[str, st
                     "p": f"{raw[-1]:.5f}",
                 }
             )
-    for family in ("primary", "secondary", "post hoc"):
+    for family in FAMILIES:
         rows = [i for i, row in enumerate(table) if row["family"] == family]
         for i, adjusted in zip(rows, holm([raw[i] for i in rows]), strict=True):
             table[i]["p_holm"] = f"{adjusted:.5f}"
@@ -308,6 +353,89 @@ def template_table(cells: Mapping[tuple[str, str], Cell]) -> list[dict[str, str]
                 row[template] = f"{np.mean(groups[template]):.3f}"
                 row[f"n_{template}"] = str(len(groups[template]))
             table.append(row)
+    return table
+
+
+def lean_table(cells: Mapping[tuple[str, str], Cell]) -> list[dict[str, str]]:
+    """How often each system says TRUE, against a question set that is half true.
+
+    ``said_true`` is the share of questions with a TRUE verdict; questions with
+    no verdict count as not TRUE. ``p_vs_half`` is an exact two-sided binomial
+    test of TRUE against FALSE verdicts, for systems with a single variant.
+    ``acc_true`` and ``acc_false`` are the accuracy on true and on false claims.
+    This table was added after the results were first read (post hoc).
+    """
+    table: list[dict[str, str]] = []
+    for config in configs_of(cells):
+        for system in SYSTEMS:
+            cell = cells.get((config, system))
+            if cell is None:
+                continue
+            shares = cell.true_shares()
+            n = len(shares)
+            share = float(np.mean(shares))
+            single_variant = len(cell.variants) == 1
+            if single_variant:
+                lo, hi = wilson_interval(sum(shares), n)
+                said_false = int(sum(np.mean(cell.said_false[q]) for q in cell.qids))
+                p = f"{mcnemar_exact(int(sum(shares)), said_false):.4f}"
+            else:
+                _, lo, hi = bootstrap_mean(shares, seed=BOOT_SEED)
+                p = ""
+            scores = dict(zip(cell.qids, cell.scores(), strict=True))
+            on_true = [scores[q] for q in cell.qids if cell.truth[q]]
+            on_false = [scores[q] for q in cell.qids if not cell.truth[q]]
+            no_verdict = sum(
+                1.0 - np.mean(cell.said_true[q]) - np.mean(cell.said_false[q]) for q in cell.qids
+            )
+            table.append(
+                {
+                    "config": config,
+                    "system": system,
+                    "n": str(n),
+                    "true_claims": str(len(on_true)),
+                    "said_true": f"{share:.3f}",
+                    "lo": f"{lo:.3f}",
+                    "hi": f"{hi:.3f}",
+                    "p_vs_half": p,
+                    "no_verdict": f"{no_verdict:.0f}",
+                    "acc_true": f"{np.mean(on_true):.3f}",
+                    "acc_false": f"{np.mean(on_false):.3f}",
+                }
+            )
+    return table
+
+
+# (short-answer system, five-line system) pairs for the change in the TRUE rate.
+LEAN_PAIRS = (("single", "long"), ("vote6", "vote6_long"), ("debate", "debate_long"))
+
+
+def lean_shift_table(cells: Mapping[tuple[str, str], Cell]) -> list[dict[str, str]]:
+    """Paired change in the share of TRUE verdicts from two-line to five-line answers.
+
+    Post hoc, like :func:`lean_table`.
+    """
+    table: list[dict[str, str]] = []
+    for config in configs_of(cells):
+        for short_name, long_name in LEAN_PAIRS:
+            a, b = cells.get((config, long_name)), cells.get((config, short_name))
+            if a is None or b is None:
+                continue
+            diff = np.asarray(a.true_shares()) - np.asarray(b.true_shares())
+            mean, lo, hi = bootstrap_mean(list(diff), seed=BOOT_SEED)
+            table.append(
+                {
+                    "config": config,
+                    "short": short_name,
+                    "long": long_name,
+                    "said_true_short": f"{np.mean(b.true_shares()):.3f}",
+                    "said_true_long": f"{np.mean(a.true_shares()):.3f}",
+                    "change": f"{mean:+.3f}",
+                    "lo": f"{lo:+.3f}",
+                    "hi": f"{hi:+.3f}",
+                    "p": f"{sign_flip_p(list(diff), seed=BOOT_SEED):.5f}",
+                }
+            )
     return table
 
 
@@ -370,7 +498,7 @@ def _style(ax: Any) -> None:
 def figure_headline(path: Path, summary: Sequence[Mapping[str, str]]) -> None:
     """Accuracy of each system with its 95% interval, one panel per configuration."""
     configs = list(dict.fromkeys(row["config"] for row in summary))
-    fig, axes = plt.subplots(1, len(configs), figsize=(3.6 * len(configs), 3.8), sharey=True)
+    fig, axes = plt.subplots(1, len(configs), figsize=(4.4 * len(configs), 4.0), sharey=True)
     fig.patch.set_facecolor(SURFACE)
     for ax, config in zip(np.atleast_1d(axes), configs, strict=True):
         rows = [r for r in summary if r["config"] == config and r["system"] in HEADLINE]
@@ -483,6 +611,8 @@ def build_report(results: Path) -> dict[str, list[dict[str, str]]]:
         "comparisons": comparison_table(cells),
         "by_template": template_table(cells),
         "debate_flow": flow_table(rows),
+        "verdict_lean": lean_table(cells),
+        "verdict_lean_shift": lean_shift_table(cells),
     }
     for name, table in tables.items():
         write_table(results / name, table)
